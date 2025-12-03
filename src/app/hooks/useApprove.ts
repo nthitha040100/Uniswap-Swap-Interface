@@ -1,80 +1,91 @@
 'use client'
 
-import { getContract } from "thirdweb";
-import { approve as erc20Approve } from "thirdweb/extensions/erc20";
-import { toast } from "react-toastify";
-import { Token } from "@/types/swapTypes";
-import client from "@/utils/thirdwebClient";
-import { UNISWAP_ROUTER } from "../constants/addresses";
-import { useSendAndConfirmTransaction } from "thirdweb/react";
-import { useEffect } from "react";
-import { useGlobal } from "../providers/GlobalProviders";
+import { useState } from "react"
+import { ethers } from "ethers"
+import { toast } from "react-toastify"
+import { Token } from "@/types/swapTypes"
+import { parseUnits } from "ethers/lib/utils"
+import { useWalletSafe } from "./useWalletSafe"
+import { UNISWAP_ROUTER } from "../constants/addresses"
+
+const ERC20_ABI = [
+  "function approve(address spender, uint256 value) returns (bool)",
+]
+
+type ApproveStatus = {
+  isPending: boolean
+  isSuccess: boolean
+  isError: boolean
+  error: Error | null
+  txHash?: string
+}
 
 export const useApprove = () => {
-  const {
-    mutate: sendTransaction,
-    isPending,
-    isError,
-    isSuccess,
-    error,
-    data,
-  } = useSendAndConfirmTransaction();
-
-  const { activeChain: chain } = useGlobal();
-
-  useEffect(() => {
-    toast.dismiss();
-
-    if (isPending) {
-      toast.loading("Approving...");
-    } else if (isSuccess) {
-      toast.success("Token Approved");
-    } else if (isError) {
-      toast.error("Approval Failed");
-    }
-  }, [isPending, isSuccess, isError]);
+  const wallet = useWalletSafe()
+  const [status, setStatus] = useState<ApproveStatus>({
+    isPending: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  })
 
   const approveToken = async ({
     token,
     amount,
   }: {
-    token: Token;
-    amount: string;
+    token: Token
+    amount: string
   }): Promise<void> => {
-    if (!chain) {
-      toast.error("No active chain found");
-      return;
+    if (!wallet) {
+      toast.error("Wallet not connected")
+      return
     }
+
+    const { signer } = wallet
 
     try {
-      const contract = getContract({
-        address: token.address,
-        client,
-        chain,
-      });
+      toast.dismiss()
+      toast.loading("Approving...")
 
-      const tx = erc20Approve({
-        contract,
-        spender: UNISWAP_ROUTER,
-        amount,
-      });
+      setStatus({
+        isPending: true,
+        isSuccess: false,
+        isError: false,
+        error: null,
+      })
 
-      sendTransaction(tx);
+      const contract = new ethers.Contract(token.address, ERC20_ABI, signer)
+      const value = parseUnits(amount, token.decimals)
+
+      const tx = await contract.approve(UNISWAP_ROUTER, value)
+      const receipt = await tx.wait()
+
+      toast.dismiss()
+      toast.success("Token Approved")
+
+      setStatus({
+        isPending: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+        txHash: receipt.transactionHash,
+      })
     } catch (err) {
-      console.error("Approval error:", err);
-      toast.dismiss();
-      toast.error("Approval failed");
+      console.error("Approval error:", err)
+      toast.dismiss()
+      toast.error("Approval failed")
+
+      setStatus({
+        isPending: false,
+        isSuccess: false,
+        isError: true,
+        error: err instanceof Error ? err : new Error("Approval failed"),
+      })
     }
-  };
+  }
 
   return {
     approveToken,
-    approveStatus: {
-      isPending,
-      isSuccess,
-      isError,
-      error,
-      data,
-    },
-  };
-};
+    approveStatus: status,
+  }
+}

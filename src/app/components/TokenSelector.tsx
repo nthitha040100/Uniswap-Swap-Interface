@@ -20,8 +20,8 @@ const TokenSelector = ({
     const [search, setSearch] = useState('')
     const [isLoading, setIsLoading] = useState(true);
     const [filteredTokens, setFilteredTokens] = useState<Token[]>([])
-    const { activeChain } = useGlobal()
-
+    const { provider } = useGlobal()
+    const chain = provider?.network
 
     useEffect(() => {
         setIsLoading(true);
@@ -30,7 +30,7 @@ const TokenSelector = ({
             .then((res) => res.json())
             .then((data) => {
                 const filtered = data.tokens
-                    .filter((token: Token) => token.chainId === activeChain?.id)
+                    .filter((token: Token) => token.chainId === chain?.chainId)
                     .map((token: Token) => ({
                         ...token,
                         logoURI: normalizeIpfsUri(token.logoURI),
@@ -40,7 +40,7 @@ const TokenSelector = ({
                 setFilteredTokens(filtered);
             })
             .finally(() => setIsLoading(false)); 
-    }, [activeChain?.id]);
+    }, [chain?.chainId]);
 
 
     useEffect(() => {

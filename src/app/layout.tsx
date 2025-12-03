@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThirdwebProvider } from "thirdweb/react";
 import { GlobalProvider } from "./providers/GlobalProviders";
 
 export const metadata: Metadata = {
@@ -16,11 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="flex flex-col min-h-screen">
-        <ThirdwebProvider>
-          <GlobalProvider>
-            {children}
-          </GlobalProvider>
-        </ThirdwebProvider>
+        <GlobalProvider>{children}</GlobalProvider>
       </body>
     </html>
   );

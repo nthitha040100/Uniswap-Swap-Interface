@@ -1,51 +1,46 @@
 'use client'
 
 import { useEffect, useState, useCallback } from "react"
-import { getContract } from "thirdweb"
-import { useGlobal } from "../providers/GlobalProviders"
-import client from "@/utils/thirdwebClient"
+import { ethers } from "ethers"
 import { Token } from "@/types/swapTypes"
-import { allowance as erc20Allowance } from "thirdweb/extensions/erc20"
 import { formatUnits } from "ethers/lib/utils"
+import { useWalletSafe } from "./useWalletSafe"
 import { UNISWAP_ROUTER } from "../constants/addresses"
 
+const ERC20_ABI = [
+  "function allowance(address owner, address spender) view returns (uint256)",
+]
+
 export function useAllowance(token: Token | null): {
-  allowance: string;
-  refetchAllowance: () => Promise<void>;
+  allowance: string
+  refetchAllowance: () => Promise<void>
 } {
   const [allowance, setAllowance] = useState<string>("0")
-  const { activeChain, userAddress } = useGlobal()
+  const wallet = useWalletSafe()
 
   const refetchAllowance = useCallback(async () => {
-    if (!activeChain || !token || !userAddress) return;
+    if (!wallet || !token) return
 
     try {
-      const tokenContract = getContract({
-        address: token.address,
-        client,
-        chain: activeChain,
-      });
-
-      const rawAllowance = await erc20Allowance({
-        contract: tokenContract,
-        owner: userAddress,
-        spender: UNISWAP_ROUTER,
-      });
-
-      setAllowance(formatUnits(rawAllowance, token.decimals));
+      const { signer, userAddress } = wallet
+      const contract = new ethers.Contract(token.address, ERC20_ABI, signer)
+      const rawAllowance: ethers.BigNumber = await contract.allowance(
+        userAddress,
+        UNISWAP_ROUTER,
+      )
+      setAllowance(formatUnits(rawAllowance, token.decimals))
     } catch (err) {
-      console.error("Error fetching allowance:", err);
-      setAllowance("0");
+      console.error("Error fetching allowance:", err)
+      setAllowance("0")
     }
-  }, [token, activeChain, userAddress]);
+  }, [token, wallet])
 
   useEffect(() => {
-    if (token) refetchAllowance();
-  }, [refetchAllowance, token]);
+    if (token) refetchAllowance()
+  }, [refetchAllowance, token])
 
   return {
     allowance,
     refetchAllowance: refetchAllowance ?? (async () => {}),
-  };
+  }
 }
-

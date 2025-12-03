@@ -25,7 +25,8 @@ import { useWalletSafe } from "./useWalletSafe";
 import { CreateTradeParams, ExecuteSwapParams, SwapStatus } from "@/types/swapTypes";
 
 export const useSwap = () => {
-    const { activeChain } = useGlobal();
+    const { provider } = useGlobal();
+    const chain = provider?.network
     const wallet = useWalletSafe();
 
     const [swapStatus, setSwapStatus] = useState<SwapStatus>({
@@ -49,7 +50,7 @@ export const useSwap = () => {
             const { provider } = wallet;
 
             try {
-                const chainId = activeChain?.id;
+                const chainId = chain?.chainId;
                 if (!chainId) {
                     toast.error("No active chain found");
                     return null;
@@ -91,7 +92,7 @@ export const useSwap = () => {
                 return null;
             }
         },
-        [wallet, activeChain?.id]
+        [wallet, chain?.chainId]
     );
 
     const executeSwap = useCallback(

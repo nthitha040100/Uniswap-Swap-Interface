@@ -12,10 +12,9 @@ const formatDate = (timestamp: number) => {
 
 export default function TransactionHistory({ transactions }: { transactions: SwapTransaction[] }) {
 
-    const { activeChain } = useGlobal()
+    const { provider } = useGlobal()
+    const chain = provider?.network
     if (!transactions.length) return null;
-
-    console.log(transactions)
 
     return (
         <div className="mt-8 overflow-x-auto">
@@ -37,7 +36,7 @@ export default function TransactionHistory({ transactions }: { transactions: Swa
                             <td className="px-4 py-2">{tx.toAmount} {tx.toSymbol}</td>
                             <td className="px-4 py-2">
                                 <a
-                                    href={activeChain? getExplorerTxUrl(activeChain.id, tx.txHash): ''}
+                                    href={chain &&  chain.chainId? getExplorerTxUrl(chain?.chainId, tx.txHash): ''}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-400 hover:underline break-all"

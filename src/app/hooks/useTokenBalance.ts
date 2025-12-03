@@ -1,46 +1,36 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { getContract } from "thirdweb"
-import client from "@/utils/thirdwebClient"
-import { useGlobal } from "../providers/GlobalProviders"
-import { balanceOf } from "thirdweb/extensions/erc20"
+import { ethers } from "ethers"
 import { formatUnits } from "ethers/lib/utils"
 import { Token } from "@/types/swapTypes"
+import { useWalletSafe } from "./useWalletSafe"
 
+const ERC20_ABI = [
+  "function balanceOf(address account) view returns (uint256)",
+]
 
 export function useTokenBalance(token: Token | null) {
+  const [balance, setBalance] = useState<string>("0")
+  const wallet = useWalletSafe()
 
-    const [balance, setBalance] = useState<string>("0")
-    const { activeChain, userAddress } = useGlobal()
+  useEffect(() => {
+    if (!wallet || !token) return
 
+    const fetchBalance = async () => {
+      try {
+        const { signer, userAddress } = wallet
+        const contract = new ethers.Contract(token.address, ERC20_ABI, signer)
+        const tokenBalance: ethers.BigNumber = await contract.balanceOf(userAddress)
+        setBalance(formatUnits(tokenBalance, token.decimals))
+      } catch (err) {
+        console.error("Error fetching balance:", err)
+        setBalance("0")
+      }
+    }
 
-    useEffect(() => {
-        if (!activeChain || !token || !userAddress) return
+    fetchBalance()
+  }, [token, wallet])
 
-        const fetchBalance = async () => {
-            try {
-
-                const tokenContract = getContract({
-                    address: token.address,
-                    client,
-                    chain: activeChain,
-                })
-
-                const tokenBalance = await balanceOf({
-                    contract: tokenContract,
-                    address: userAddress,
-                })
-
-                setBalance(formatUnits(tokenBalance, token.decimals))
-            } catch (err) {
-                console.error("Error fetching balance:", err)
-                setBalance("0")
-            }
-        }
-
-        fetchBalance()
-    }, [token, activeChain, userAddress])
-
-    return balance
+  return balance
 }

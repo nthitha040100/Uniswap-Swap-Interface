@@ -107,7 +107,6 @@ const SwapWidget = () => {
 
     const hasSufficientAllowance = () => {
         if (!fromToken || !allowance) return false;
-        console.log(fromAmount, allowance)
         return parseFloat(allowance) >= parseFloat(fromAmount || "0");
     }
 
