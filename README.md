@@ -1,15 +1,15 @@
 # 🦄 Uniswap Swap Interface
 
-A clean and functional token swap interface powered by Uniswap, built with Next.js and enhanced using thirdweb and ethers.js for blockchain interactions.
+A clean and functional token swap interface powered by Uniswap, built with Next.js and using **ethers.js** with a browser-injected wallet (MetaMask, Rabby, etc.) for blockchain interactions.
 
 ---
 
 ## 🧰 Tech Stack
 
-- **Framework**: [Next.js](https://nextjs.org/)
+- **Framework**: Next.js
 - **Styling**: Tailwind CSS
 - **Blockchain Interaction**:  
-  - **thirdweb** – for wallet connection and React hooks
+  - **Injected wallet** via `window.ethereum` (MetaMask, Rabby, etc.)
   - **ethers.js v5** – for transaction signing and Uniswap integration
 - **Swapping Logic**: Uniswap SDK
 - **State Management**: React Context API
@@ -28,27 +28,36 @@ A clean and functional token swap interface powered by Uniswap, built with Next.
    ```bash
    npm install
    ```
-3. **Set up environment variables**:
-   Create a `.env` file with the following:
-   ```env
-   NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_thirdweb_client_id_here
-   ```
+3. **Environment Variables ( optional )**:
+   For the basic swap interface and wallet connection, env vars are not required.
 4. Start the development server:
    ```bash
    npm run dev
    ```
 5. Open http://localhost:3000 in your browser.
 
+> 💡 Make sure you have a browser wallet installed (e.g., MetaMask or Rabby) and that it’s unlocked. The app uses window.ethereum under the hood.
+
 ---
 
 ## ⚖️ Tradeoff Decisions
 
-### 🔧 thirdweb + ethers.js
+### 🔧 Vanilla ethers.js + injected wallets
 
-- **thirdweb** offers powerful hooks like `useActiveAccount` and a clean `ThirdwebProvider`, which fit naturally in a React/Next.js app.
-- **ethers.js v5** provides precise control for transaction creation and signing — especially important when working with the Uniswap SDK.
+Instead of using an additional wallet SDK, the app now uses:
+- `window.ethereum` from the browser wallet (MetaMask/Rabby/etc.
+- `ethers.providers.Web3Provider` and `signer` for all reads/writes
+- A custom `GlobalProvider` + `ConnectWallet` button to manage:
+  - connection/disconnection
+  - current address
+  - signer + provider
+  - transaction history
+Why this approach?
+- Keeps dependencies minimal and transparent.
+- Easy to reason about: everything goes through `ethers` and your own hooks.
+- Swapping out the wallet layer later (e.g., to wagmi/RainbowKit or Web3Modal) is straightforward because the rest of the app talks only to `provider`, `signer`, and `userAddress`.
 
-> **Decision**: Used **thirdweb** for wallet UI/hooks, and **ethers.js** for core transaction handling, combining ease of use with low-level control.
+> **Decision**: Use vanilla ethers.js + injected wallets for maximum control and a small dependency surface, while keeping an easy migration path to higher-level wallet libraries if needed.
 
 ### 🔀 Uniswap SDK vs REST API
 
